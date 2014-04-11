@@ -1,6 +1,6 @@
 #include <ncurses.h>
 
-/* Arbitrary scaling factors used to ensure that */
+/* Arbitrary scaling factors used to ensure that display is vaguely square */
 #define W_STREATCH 4
 #define H_STREATCH 2
 
@@ -15,7 +15,7 @@
 
 WINDOW * win; //Main window
 int grid[9][9]; //Grid that holds numerical values
-int initgrid[9][9]; //Initial grid, possible use for saving initial state
+int initgrid[9][9]; //Initial grid, used for saving initial state
 
 /* Cursor coordinates (in terms of grid) */
 int c_y;
@@ -30,15 +30,17 @@ int main () {
 	cbreak();
 	noecho();
 	erase();
-	printw("Why isn't this working?\n");
+//	printw("Why isn't this working?\n");
 
 	win = newwin(W_HEIGHT, W_WIDTH, 2, 2);
 	keypad(win, TRUE);
-/*	int x, y;
+	int x, y;
 	for (x = 0; x < 9; x++)
-		for (y = 0; y < 9; y++)
-			grid[x][y] = (x * y + 1) % 10;
-*/
+		for (y = 0; y < 9; y++) {
+			initgrid[x][y] = 0
+			grid[x][y] = 0; //Temporary, until grids can be created
+		}
+
 	drawwin();
 //	wmove(win, wy(0), wx(0));
 //	refresh();
@@ -111,8 +113,10 @@ int main_loop() {
 				break;
 			case ' ':
 			case '0':
-				waddch(win, ' ');
-				grid[c_x][c_y] = 0;
+				if (!initgrid[c_x][c_y]) { //Don't overwrite initial grid, only change its zeros
+					waddch(win, ' ');
+					grid[c_x][c_y] = 0;
+				}
 				break;
 			case '1':
 			case '2':
@@ -123,8 +127,12 @@ int main_loop() {
 			case '7':
 			case '8':
 			case '9':
-				waddch(win, ch);
-				grid[c_x][c_y] = ch - '0';
+				if (!initgrid[c_x][c_y]) {
+					waddch(win, ch);
+					grid[c_x][c_y] = ch - '0';
+				}
+				break;
+			case ':': //Special commands with colon - not implemented
 				break;
 			default:
 				break;
