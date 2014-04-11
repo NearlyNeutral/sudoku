@@ -37,7 +37,7 @@ int main () {
 	int x, y;
 	for (x = 0; x < 9; x++)
 		for (y = 0; y < 9; y++) {
-			initgrid[x][y] = 0
+			initgrid[x][y] = 0;
 			grid[x][y] = 0; //Temporary, until grids can be created
 		}
 
