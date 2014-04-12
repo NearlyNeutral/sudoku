@@ -1,0 +1,5 @@
+Compile with
+	$ gcc -o sudoku{,.c} -lncurses
+
+Run with
+	$ ./sudoku
