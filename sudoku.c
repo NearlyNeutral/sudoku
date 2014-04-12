@@ -34,6 +34,7 @@ int draw_infowin();
 int update_complete();
 int highlight(int hnum); //Highlight number
 int special(); //Do special commands
+int goodbye();
 
 int main () {
 	c_x = c_y = 0;
@@ -75,6 +76,7 @@ int main () {
 //		refresh();
 //	}
 //	getch();
+	goodbye();
 	endwin();
 
 	return 0;
@@ -168,6 +170,10 @@ int main_loop() {
 		c_x = (c_x + 9) % 9;
 		c_y = (c_y + 9) % 9;
 		wmove(win, wy(c_y), wx(c_x));
+		if (cal_progress() == 27) {
+			wrefresh(win);
+			break;
+		}
 	}
 
 
@@ -226,9 +232,9 @@ int cal_progress() {
 
 int draw_infowin() {
 	werase(infowin);
-	mvwprintw(infowin, 0, 0, "Complete:   /27   Highlight no.      ");
+	mvwprintw(infowin, 0, 0, "Complete:   /27  Highlight no.      ");
 	wattron(infowin, A_BOLD);
-	mvwprintw(infowin, 0, 32, ":#");
+	mvwprintw(infowin, 0, 31, ":#");
 	wattroff(infowin, A_BOLD);
 	update_complete();
 //	wrefresh(infowin);
@@ -281,6 +287,9 @@ int special() {
 		case '9':		
 			highlight(c - '0');
 			break;
+		case ' ':
+			highlight(0);
+			break;
 		default:
 			break;
 	}
@@ -288,5 +297,18 @@ int special() {
 	wrefresh(infowin);	
 
 	return 0;
+}
+
+int goodbye() {
+	WINDOW * gbye;
+	gbye = newwin(3, 12, (W_HEIGHT - 3)/2 + 1, (W_WIDTH - 12)/2 + 1);
+	wattron(gbye, A_BOLD);
+	box(gbye, 0, 0);
+	if (cal_progress() == 27)
+		mvwprintw(gbye, 1,2, "You win!");
+	else
+		mvwprintw(gbye, 1,2, "Goodbye!");
+	wattroff(gbye, A_BOLD);
+	wgetch(gbye);
 }
 
