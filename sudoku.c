@@ -1,4 +1,5 @@
 #include <ncurses.h>
+#include <time.h>
 
 /* Arbitrary scaling factors used to ensure that display is vaguely square */
 #define W_STREATCH 4
@@ -16,10 +17,27 @@
 #define wx(G_X) (G_X * W_STREATCH + 1) 
 #define wy(G_Y) (G_Y * H_STREATCH + 1)
 
+/* Number of random row/column/box swaps to make */
+#define RANDOMISE_TIMES 100000
+
+/* Random number helper macro */
+//#define RANDOM(L, H) ((rand() % (H - L)) + L)
+#define RANDOM(H) (rand() % H)
+
 
 WINDOW * win; //Main window
 WINDOW * infowin; //Secondary window with commands etc
-int grid[9][9]; //Grid that holds numerical values
+int grid[9][9] =  { //Could be changed?
+		{ 1, 2, 3, 4, 5, 6, 7, 8, 9},
+		{ 4, 5, 6, 7, 8, 9, 1, 2, 3}, 
+		{ 7, 8, 9, 1, 2, 3, 4, 5, 6},
+		{ 2, 3, 4, 5, 6, 7, 8, 9, 1},
+		{ 5, 6, 7, 8, 9, 1, 2, 3, 4},
+		{ 8, 9, 1, 2, 3, 4, 5, 6, 7},
+		{ 3, 4, 5, 6, 7, 8, 9, 1, 2},
+		{ 6, 7, 8, 9, 1, 2, 3, 4, 5},
+		{ 9, 1, 2, 3, 4, 5, 6, 7, 8} }; //Grid that holds numerical values
+
 int initgrid[9][9]; //Initial grid, used for saving initial state
 
 /* Cursor coordinates (in terms of grid) */
@@ -34,18 +52,23 @@ int draw_infowin();
 int update_complete();
 int highlight(int hnum); //Highlight number
 int special(); //Do special commands
-int goodbye();
+int goodbye(); //Show goodbye box
+int randomise(); //Randomise grid
 
 int main () {
 	c_x = c_y = 0;
 	highlighted = 0;
+	srand(time(NULL));
 	initscr();
 	cbreak();
 	noecho();
 //	start_color();
 //	init_pair(1, COLOR_WHITE, COLOR_BLACK);
 //	init_pair(1, COLOR_BLACK, COLOR_WHITE);
+	randomise();
+	getch();
 	erase();
+	refresh();
 //	printw("Why isn't this working?\n");
 
 	win = newwin(W_HEIGHT, W_WIDTH, 1, 1);
@@ -54,10 +77,11 @@ int main () {
 	int x, y;
 	for (x = 0; x < 9; x++)
 		for (y = 0; y < 9; y++) {
-			initgrid[x][y] = 0;
-			grid[x][y] = 0; //Temporary, until grids can be created
+			
+//			grid[x][y] = 0; //Temporary, until grids can be created
+			initgrid[x][y] = grid[x][y];
 		}
-	initgrid[3][5] = grid[3][5] = 7; //Debug test value
+//	initgrid[3][5] = grid[3][5] = 7; //Debug test value
 
 	drawwin();
 	draw_infowin();
@@ -140,7 +164,10 @@ int main_loop() {
 				if (!initgrid[c_x][c_y]) { //Don't overwrite initial grid, only change its zeros
 					waddch(win, ' ');
 					grid[c_x][c_y] = 0;
-					update_complete();
+					if (update_complete() == 27) {
+						wrefresh(win);
+						break;
+					}
 				}
 				break;
 			case '1':
@@ -156,7 +183,10 @@ int main_loop() {
 					waddch(win, ch);
 					grid[c_x][c_y] = ch - '0';
 					if ((ch - '0') == highlighted) highlight(highlighted); //Highlight new numbers also
-					update_complete();
+					if (update_complete() == 27) {
+						wrefresh(win);
+						break;
+					}
 				}
 				break;
 			case ':': //Special commands with colon - not implemented
@@ -170,10 +200,6 @@ int main_loop() {
 		c_x = (c_x + 9) % 9;
 		c_y = (c_y + 9) % 9;
 		wmove(win, wy(c_y), wx(c_x));
-		if (cal_progress() == 27) {
-			wrefresh(win);
-			break;
-		}
 	}
 
 
@@ -243,10 +269,11 @@ int draw_infowin() {
 
 int update_complete() {
 	wattron(infowin, A_BOLD);
-	mvwprintw(infowin, 0, 10, "%2d", cal_progress());
+	int c = cal_progress();
+	mvwprintw(infowin, 0, 10, "%2d", c);
 	wattroff(infowin, A_BOLD);
 	wrefresh(infowin);
-	return 0;
+	return c;
 }
 
 //Basically redraws the screen - highlight(0) could be used to replace part of drawwin()
@@ -310,5 +337,74 @@ int goodbye() {
 		mvwprintw(gbye, 1,2, "Goodbye!");
 	wattroff(gbye, A_BOLD);
 	wgetch(gbye);
+}
+
+int randomise() { //Doesn't randomise enough - still have 369 etc together in each box
+	mvprintw(0,0,"Randomising grid. Progress: (  0%%)");
+	int i;
+	int borl, horv, bn, g1, g2; //verialbes for random numberin
+	int temp; //Temp variable for swapping
+	int x, y;
+	for (i = 0; i < RANDOMISE_TIMES; i++) {
+		borl = RANDOM(2);
+		horv = RANDOM(2);
+		bn = RANDOM(3);
+		g1 = RANDOM(3);
+		while ((g2 = RANDOM(3)) == g1) ;//g1 can't equal g2
+		if (borl) { //Swap boxes
+			if (horv) { //horizontal lines of boxes
+				for (x = 0; x < 9; x++) 
+					for (y = 0; y < 3; y++) {
+						temp = grid[x][g1 * 3 + y];
+						grid[x][g1 * 3 + y] = grid[x][g2 * 3 + y];
+						grid[x][g2 * 3 + y] = temp;
+					}
+
+				
+
+			} else { //vertical
+				for (x = 0; x < 3; x++) 
+					for (y = 0; y < 9; y++) {
+						temp = grid[g1 * 3 + x][y];
+						grid[g1 * 3 + x][y] = grid[g2 * 3 + x][y];
+						grid[g2 * 3 + x][y] = temp;
+					}
+
+			}
+
+
+		} else { //Swap rows/columns
+			if (horv) { //horizontal
+				for (x = 0; x < 9; x++) {
+					temp = grid[x][bn * 3 + g1];
+					grid[x][bn * 3 + g1] = grid[x][bn * 3 + g2];
+					grid[x][bn * 3 + g2] = temp;
+				}
+			} else { //vertical
+				for (y = 0; y < 9; y++) {
+					temp = grid[bn * 3 + g1][y];
+					grid[bn * 3 + g1][y] = grid[bn * 3 + g2][y];
+					grid[bn * 3 + g2][y] = temp;
+				}
+			}
+
+		}
+		g1 = (RANDOM(9) + 1);
+
+		while ((g2 = (RANDOM(9) + 1)) == g1) ;
+		for (x = 0; x < 9; x++)
+			for (y = 0; y < 9; y++)
+				if (grid[x][y] == g1)
+					grid[x][y] = g2;
+				else if (grid[x][y] == g2)
+					grid[x][y] = g1;
+		
+
+		mvprintw(0,29,"%3d",((i + 1) * 100) / RANDOMISE_TIMES);
+		refresh();
+	}
+//	mvprintw(1, 0, "%d %d %d %d %d", borl, horv, bn, g1, g2);
+	move(0,34);
+
 }
 
